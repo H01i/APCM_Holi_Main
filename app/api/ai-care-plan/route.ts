@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export async function POST(request: NextRequest) {
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
     return NextResponse.json(
       { error: "OPENAI_API_KEY not set" },
       { status: 500 },
@@ -15,6 +12,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const { form } = (await request.json()) as { form: Record<string, unknown> };
+
+    // Instantiate inside handler so builds do not require the key.
+    const client = new OpenAI({ apiKey });
 
     const prompt = [
       "You are an APCM care coordinator drafting an initial care plan.",
