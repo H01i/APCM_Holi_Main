@@ -37,7 +37,8 @@ export default function RootLayout({
               {[
                 { href: "/", label: "Dashboard" },
                 { href: "/patients", label: "Patients" },
-                { href: "/care-plans", label: "Care Plans" },
+                { href: "/care-plans/list", label: "Care Plans" },
+                { href: "/care-plans", label: "Care Plan Forms" },
                 { href: "/settings", label: "Settings" },
               ].map((link) => (
                 <Link

@@ -18,8 +18,10 @@ export async function POST(request: NextRequest) {
 
     const prompt = [
       "You are an APCM care coordinator drafting an initial care plan.",
-      "Use concise bullet points and keep it patient-friendly.",
-      "Highlight: conditions, meds/polypharmacy, adherence, functional status, SDOH barriers, risk/safety, two goals with targets/barriers/interventions, follow-ups, consent status.",
+      "Respond in clear Markdown with headings and bullets only; avoid long paragraphs.",
+      "Sections: Summary, Conditions & Meds, Functional Status, SDOH & Risk, Goals (2+ with targets, barriers, interventions), Follow-up Plan, Consent/Access.",
+      "Tone: professional, patient-friendly plain language that providers and billers can follow.",
+      "Keep it concise and action-oriented.",
       "",
       `Form data (JSON): ${JSON.stringify(form, null, 2)}`,
     ].join("\n");

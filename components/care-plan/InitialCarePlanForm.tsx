@@ -934,9 +934,9 @@ export default function InitialCarePlanForm() {
             <span className="h-2 w-2 rounded-full bg-indigo-600" />
             AI-Generated APCM Care Plan
           </div>
-          <pre className="whitespace-pre-wrap rounded-md border border-indigo-100 bg-white/60 p-3 text-sm text-slate-800 shadow-inner">
-            {generatedPlan}
-          </pre>
+          <div className="rounded-md border border-indigo-100 bg-white/60 p-4 text-sm text-slate-800 shadow-inner">
+            {renderPlan(generatedPlan)}
+          </div>
         </div>
       )}
     </section>
@@ -1031,4 +1031,72 @@ function friendlyLabel(field: keyof CarePlanFormState): string {
     coordinatorSignature: "Coordinator Signature/Initials",
   };
   return labels[field];
+}
+
+function renderPlan(plan: string) {
+  const blocks = plan.trim().split(/\n\s*\n/).filter(Boolean);
+
+  return (
+    <div className="space-y-3">
+      {blocks.map((block, idx) => {
+        const lines = block.split("\n").filter(Boolean);
+        const first = lines[0] ?? "";
+
+        if (first.startsWith("# ")) {
+          return (
+            <div key={idx} className="space-y-1">
+              <h2 className="text-base font-semibold text-slate-900">
+                {first.replace(/^#\s*/, "")}
+              </h2>
+              {lines.slice(1).map((line, lineIdx) => (
+                <p key={lineIdx} className="text-sm text-slate-800">
+                  {line.replace(/^-\s*/, "")}
+                </p>
+              ))}
+            </div>
+          );
+        }
+
+        if (first.startsWith("## ")) {
+          return (
+            <div key={idx} className="space-y-1">
+              <h3 className="text-sm font-semibold text-slate-900">
+                {first.replace(/^##\s*/, "")}
+              </h3>
+              {renderListOrParagraph(lines.slice(1), idx)}
+            </div>
+          );
+        }
+
+        return (
+          <div key={idx} className="space-y-1">
+            {renderListOrParagraph(lines, idx)}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function renderListOrParagraph(lines: string[], keyBase: number) {
+  const isList = lines.every((line) => line.trim().startsWith("-"));
+  if (isList) {
+    return (
+      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-800">
+        {lines.map((line, idx) => (
+          <li key={`${keyBase}-li-${idx}`}>{line.replace(/^-\s*/, "")}</li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <>
+      {lines.map((line, idx) => (
+        <p key={`${keyBase}-p-${idx}`} className="text-sm text-slate-800">
+          {line.replace(/^-\s*/, "")}
+        </p>
+      ))}
+    </>
+  );
 }
