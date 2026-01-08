@@ -138,12 +138,61 @@ const initialFormState: CarePlanFormState = {
   coordinatorSignature: "",
 };
 
+const samplePrefill: CarePlanFormState = {
+  email: "patient@example.com",
+  patientId: "p1",
+  intakeDate: "2025-01-08",
+  careCoordinator: "RN Smith",
+  provider: "Dr. Taylor",
+  primaryConditions: ["Hypertension", "Type 2 Diabetes"],
+  conditionNotes: "Recent A1c 8.2; home BP 140s/80s; overweight; limited exercise.",
+  currentMeds:
+    "Metformin 1000 mg BID; Losartan 50 mg daily; Atorvastatin 20 mg qhs; Aspirin 81 mg daily.",
+  polypharmacyStatus: "polypharmacy",
+  medAdherence: "partial",
+  functionalStatus: "needs-some-help",
+  adl: "Independent with most ADLs; occasional help with bathing after dizziness.",
+  iadl: "Needs help with transportation to appointments; grocery delivery in place.",
+  mentalHealth: "phq9-completed",
+  socialSupport: "limited",
+  sdohBarriers: ["Transportation", "Food access"],
+  sdohNotes: "Provide transportation voucher; connect to food pharmacy program.",
+  riskFactors:
+    "Elevated A1c; hypertension; limited support; transportation barriers; prior ER visit for dizziness.",
+  riskNotes: "Fall prevention reviewed; advised to call nurse line for dizziness or glucose <70.",
+  goal1: "Lower A1c",
+  goal1Target: "Reach A1c 7.0% in 3 months",
+  goal1Barriers: "Diet adherence, med cost, forgets evening dose",
+  goal1Interventions:
+    "RD referral; pillbox and phone reminders; consider GLP-1 coverage check; weekly RN outreach.",
+  goal2: "Improve blood pressure control",
+  goal2Target: "Home BP <130/80 in 8 weeks",
+  goal2Barriers: "Occasional missed doses; high-sodium takeout",
+  goal2Interventions:
+    "Nurse coaching on low-sodium meals; add BP cuff education; med sync at pharmacy; check adherence in 2 weeks.",
+  preventiveScreenings: "AWV done 2024; A1c due Feb 2025; retinal exam due; colon CA up to date.",
+  immunizations: "Influenza 2024; COVID booster 2024; needs shingles series; Tdap status unknown.",
+  specialists: "Endocrinology — Dr. Gomez, next available TBD; Ophthalmology referral pending.",
+  portalAccess: "needs-setup",
+  communicationMethod: "phone",
+  access24Review: "yes",
+  advanceDirectives: "pending",
+  proxyDesignated: "yes",
+  nextFollowUp: "2025-02-15",
+  nextProviderVisit: "2025-03-01",
+  actionItems: "Send RD referral; schedule retinal exam; set A1c lab; arrange transportation.",
+  consentObtained: "written",
+  planCopyProvided: "yes",
+  coordinatorSignature: "RS",
+};
+
 export default function InitialCarePlanForm() {
   const [form, setForm] = useState<CarePlanFormState>(initialFormState);
   const [patients, setPatients] = useState<PatientOption[]>(basePatientOptions);
   const [status, setStatus] = useState<FormStatus>({ type: "idle" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState("");
+  const [prefillChecked, setPrefillChecked] = useState(false);
 
   const handleChange = (
     event:
@@ -284,6 +333,22 @@ export default function InitialCarePlanForm() {
     });
   };
 
+  const handlePrefillToggle = (checked: boolean) => {
+    setPrefillChecked(checked);
+    if (checked) {
+      setForm(samplePrefill);
+      setGeneratedPlan("");
+      setStatus({
+        type: "success",
+        message: "Sample data prefilled for quick testing.",
+      });
+    } else {
+      setForm(initialFormState);
+      setGeneratedPlan("");
+      setStatus({ type: "idle" });
+    }
+  };
+
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -303,6 +368,15 @@ export default function InitialCarePlanForm() {
           >
             Generate test patients
           </button>
+          <label className="flex items-center gap-2 text-xs font-medium text-slate-800">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              checked={prefillChecked}
+              onChange={(e) => handlePrefillToggle(e.target.checked)}
+            />
+            Pre-fill required fields (sample data)
+          </label>
           <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
             Required fields marked *
           </span>
