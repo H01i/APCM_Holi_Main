@@ -142,6 +142,8 @@ export default function InitialCarePlanForm() {
   const [form, setForm] = useState<CarePlanFormState>(initialFormState);
   const [patients, setPatients] = useState<PatientOption[]>(basePatientOptions);
   const [status, setStatus] = useState<FormStatus>({ type: "idle" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generatedPlan, setGeneratedPlan] = useState("");
 
   const handleChange = (
     event:
@@ -162,7 +164,7 @@ export default function InitialCarePlanForm() {
     });
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const requiredScalar: (keyof CarePlanFormState)[] = [
@@ -214,11 +216,41 @@ export default function InitialCarePlanForm() {
       return;
     }
 
-    console.log("Initial care plan payload", form);
-    setStatus({
-      type: "success",
-      message: "Initial care plan draft captured (mock submit).",
-    });
+    setIsSubmitting(true);
+    setGeneratedPlan("");
+    setStatus({ type: "idle" });
+
+    try {
+      console.log("Initial care plan payload", form);
+      const response = await fetch("/api/ai-care-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ form }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.error ?? "Failed to generate care plan");
+      }
+
+      const data = (await response.json()) as { plan?: string };
+      setGeneratedPlan(data.plan ?? "");
+      setStatus({
+        type: "success",
+        message: "AI-generated APCM care plan ready below.",
+      });
+    } catch (error) {
+      console.error("Care plan generation failed", error);
+      setStatus({
+        type: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to generate care plan right now.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleReset = () => {
@@ -878,9 +910,10 @@ export default function InitialCarePlanForm() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
+          disabled={isSubmitting}
             className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
           >
-            Save Care Plan Draft
+          {isSubmitting ? "Generating..." : "Save & Generate Care Plan"}
           </button>
           <button
             type="button"
@@ -890,10 +923,22 @@ export default function InitialCarePlanForm() {
             Reset Form
           </button>
           <p className="text-xs text-slate-500">
-            This form is mock-only and does not yet call the care plan API.
+            This form calls the AI care plan endpoint; set OPENAI_API_KEY in env.
           </p>
         </div>
       </form>
+
+      {generatedPlan && (
+        <div className="mt-6 space-y-3 rounded-lg border border-indigo-100 bg-indigo-50 p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-sm font-semibold text-indigo-800">
+            <span className="h-2 w-2 rounded-full bg-indigo-600" />
+            AI-Generated APCM Care Plan
+          </div>
+          <pre className="whitespace-pre-wrap rounded-md border border-indigo-100 bg-white/60 p-3 text-sm text-slate-800 shadow-inner">
+            {generatedPlan}
+          </pre>
+        </div>
+      )}
     </section>
   );
 }
