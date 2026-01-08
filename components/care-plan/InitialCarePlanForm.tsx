@@ -46,12 +46,14 @@ type CarePlanFormState = {
   coordinatorSignature: string;
 };
 
+type PatientOption = { id: string; name: string; risk: string };
+
 type FormStatus =
   | { type: "idle" }
   | { type: "success"; message: string }
   | { type: "error"; message: string };
 
-const patientOptions = [
+const basePatientOptions: PatientOption[] = [
   { id: "p1", name: "Alex Johnson", risk: "Level 2" },
   { id: "p2", name: "Maria Chen", risk: "Level 1" },
   { id: "p3", name: "Samir Patel", risk: "Level 3" },
@@ -138,6 +140,7 @@ const initialFormState: CarePlanFormState = {
 
 export default function InitialCarePlanForm() {
   const [form, setForm] = useState<CarePlanFormState>(initialFormState);
+  const [patients, setPatients] = useState<PatientOption[]>(basePatientOptions);
   const [status, setStatus] = useState<FormStatus>({ type: "idle" });
 
   const handleChange = (
@@ -223,6 +226,32 @@ export default function InitialCarePlanForm() {
     setStatus({ type: "idle" });
   };
 
+  const generateTestPatients = () => {
+    const names = [
+      "Jordan Lee",
+      "Priya Nair",
+      "Diego Martinez",
+      "Fatima Rahman",
+      "Chris O'Connor",
+    ];
+    const risks = ["Level 1", "Level 2", "Level 3"];
+    const now = Date.now();
+    const generated: PatientOption[] = names.map((name, idx) => ({
+      id: `tp-${now}-${idx}`,
+      name,
+      risk: risks[idx % risks.length],
+    }));
+
+    setPatients((prev) => [...prev, ...generated]);
+    if (!form.patientId && generated.length > 0) {
+      setForm((prev) => ({ ...prev, patientId: generated[0].id }));
+    }
+    setStatus({
+      type: "success",
+      message: `Added ${generated.length} test patients for training.`,
+    });
+  };
+
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -234,9 +263,18 @@ export default function InitialCarePlanForm() {
             Capture APCM-required intake, assessments, goals, consent, and follow-up details.
           </p>
         </div>
-        <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-          Required fields marked *
-        </span>
+        <div className="flex flex-col items-end gap-2">
+          <button
+            type="button"
+            onClick={generateTestPatients}
+            className="inline-flex items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
+          >
+            Generate test patients
+          </button>
+          <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+            Required fields marked *
+          </span>
+        </div>
       </div>
 
       {status.type === "error" && (
@@ -276,7 +314,7 @@ export default function InitialCarePlanForm() {
                 <option value="" disabled>
                   Choose patient
                 </option>
-                {patientOptions.map((patient) => (
+                {patients.map((patient) => (
                   <option key={patient.id} value={patient.id}>
                     {patient.name} — {patient.risk}
                   </option>
