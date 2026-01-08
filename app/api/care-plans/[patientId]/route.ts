@@ -5,9 +5,10 @@ const carePlans = new Map<string, CarePlan>();
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { patientId: string } },
+  { params }: { params: Promise<{ patientId: string }> },
 ) {
-  const plan = carePlans.get(params.patientId);
+  const { patientId } = await params;
+  const plan = carePlans.get(patientId);
 
   if (!plan) {
     return NextResponse.json({ error: "Care plan not found" }, { status: 404 });
@@ -18,21 +19,22 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { patientId: string } },
+  { params }: { params: Promise<{ patientId: string }> },
 ) {
+  const { patientId } = await params;
   try {
     const body = (await request.json()) as Partial<CarePlan>;
 
     const plan: CarePlan = {
       planId: body.planId ?? crypto.randomUUID(),
-      patientId: params.patientId,
+      patientId,
       goals: body.goals ?? [],
       needs: body.needs ?? [],
       selfManagementActivities: body.selfManagementActivities ?? [],
       revisionHistory: [],
     };
 
-    carePlans.set(params.patientId, plan);
+    carePlans.set(patientId, plan);
 
     return NextResponse.json({ carePlan: plan }, { status: 201 });
   } catch (error) {
@@ -46,9 +48,10 @@ export async function POST(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { patientId: string } },
+  { params }: { params: Promise<{ patientId: string }> },
 ) {
-  const existing = carePlans.get(params.patientId);
+  const { patientId } = await params;
+  const existing = carePlans.get(patientId);
 
   if (!existing) {
     return NextResponse.json({ error: "Care plan not found" }, { status: 404 });
@@ -76,7 +79,7 @@ export async function PUT(
       revisionHistory: [...existing.revisionHistory, revision],
     };
 
-    carePlans.set(params.patientId, updatedPlan);
+    carePlans.set(patientId, updatedPlan);
 
     return NextResponse.json({ carePlan: updatedPlan });
   } catch (error) {

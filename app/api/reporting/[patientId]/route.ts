@@ -3,9 +3,10 @@ import { generatePatientReport } from "@/lib/reporting";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { patientId: string } },
+  { params }: { params: Promise<{ patientId: string }> },
 ) {
-  const report = generatePatientReport(params.patientId);
+  const { patientId } = await params;
+  const report = generatePatientReport(patientId);
 
   return new NextResponse(report, {
     status: 200,
