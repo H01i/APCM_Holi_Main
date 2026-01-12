@@ -1,8 +1,7 @@
 'use client';
 
+import { marked } from "marked";
 import { useEffect, useMemo, useState } from "react";
-import ReactMarkdown, { type Components } from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 const LS_KEY = "apcm-care-plan-draft";
 const primaryHeader = "bg-[#1F4E78]";
@@ -1173,45 +1172,49 @@ function renderPlan(plan: string) {
     ),
   ).trim();
 
-  const components: Components = {
-    h1: ({ node, ...props }) => (
-      <h2 className="text-lg font-semibold text-[#1F4E78]" {...props} />
-    ),
-    h2: ({ node, ...props }) => (
-      <h3 className="text-base font-semibold text-[#1F4E78]" {...props} />
-    ),
-    h3: ({ node, ...props }) => (
-      <h4 className="text-sm font-semibold text-[#1F4E78]" {...props} />
-    ),
-    p: ({ node, ...props }) => <p className="text-sm text-slate-800" {...props} />,
-    ul: ({ node, ...props }) => (
-      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-800" {...props} />
-    ),
-    li: ({ node, ...props }) => <li {...props} />,
-    table: ({ node, ...props }) => (
-      <div className="overflow-hidden rounded-md border border-slate-200 shadow-sm">
-        <table className="min-w-full border-collapse text-sm" {...props} />
-      </div>
-    ),
-    thead: ({ node, ...props }) => <thead className="bg-[#1F4E78] text-white" {...props} />,
-    tbody: ({ node, ...props }) => <tbody {...props} />,
-    tr: ({ node, ...props }) => <tr className="even:bg-[#F3F6FB]" {...props} />,
-    th: ({ node, ...props }) => (
-      <th className="border border-[#1F4E78] px-3 py-2 text-left font-semibold" {...props} />
-    ),
-    td: ({ node, ...props }) => (
-      <td className="border border-slate-200 px-3 py-2 align-top text-slate-800" {...props} />
-    ),
+  const renderer = new marked.Renderer();
+  renderer.heading = (text, level) => {
+    const Tag = level === 1 ? "h2" : level === 2 ? "h3" : "h4";
+    const size =
+      level === 1 ? "text-lg" : level === 2 ? "text-base" : "text-sm";
+    return `<${Tag} class="${size} font-semibold text-[#1F4E78] mb-2">${text}</${Tag}>`;
+  };
+  renderer.paragraph = (text) =>
+    `<p class="text-sm text-slate-800 mb-2">${text}</p>`;
+  renderer.list = (body) =>
+    `<ul class="list-disc space-y-1 pl-5 text-sm text-slate-800 mb-2">${body}</ul>`;
+  renderer.listitem = (text) => `<li>${text}</li>`;
+  renderer.table = (header, body) =>
+    `<div class="overflow-hidden rounded-md border border-slate-200 shadow-sm mb-4">
+      <table class="min-w-full border-collapse text-sm">
+        <thead class="bg-[#1F4E78] text-white">${header}</thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+  renderer.tablerow = (content) => `<tr class="even:bg-[#F3F6FB]">${content}</tr>`;
+  renderer.tablecell = (content, flags) => {
+    const Tag = flags.header ? "th" : "td";
+    const base = flags.header
+      ? "border border-[#1F4E78] px-3 py-2 text-left font-semibold"
+      : "border border-slate-200 px-3 py-2 align-top text-slate-800";
+    return `<${Tag} class="${base}">${content}</${Tag}>`;
   };
 
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
+    mangle: false,
+    headerIds: false,
+    renderer,
+  });
+
+  const html = marked.parse(cleaned);
+
   return (
-    <div className="space-y-4">
-      <div className="prose prose-slate max-w-none prose-headings:text-[#1F4E78] prose-p:text-slate-800 prose-strong:text-[#1F4E78]">
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-          {cleaned}
-        </ReactMarkdown>
-      </div>
-    </div>
+    <div
+      className="prose prose-slate max-w-none prose-headings:text-[#1F4E78] prose-p:text-slate-800 prose-strong:text-[#1F4E78]"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 /* DUPLICATE BLOCK COMMENTED OUT
