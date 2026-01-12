@@ -1158,9 +1158,18 @@ function renderPlan(plan: string) {
   const ensureTableSpacing = (text: string) =>
     text.replace(/([^\n])\n(\|)/g, "$1\n\n$2");
 
+  // Trim leading whitespace on table lines so they are not treated as code blocks.
+  const normalizeTableLines = (text: string) =>
+    text
+      .split("\n")
+      .map((line) => (line.trimStart().startsWith("|") ? line.trimStart() : line))
+      .join("\n");
+
   const cleaned = ensureTableSpacing(
-    promoteTableHeadings(
-      normalizeIndentation(stripCodeFence(plan).replace(/\r/g, "")),
+    normalizeTableLines(
+      promoteTableHeadings(
+        normalizeIndentation(stripCodeFence(plan).replace(/\r/g, "")),
+      ),
     ),
   ).trim();
 
