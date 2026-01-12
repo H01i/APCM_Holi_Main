@@ -1,3 +1,1152 @@
+/* DUPLICATE BLOCK REMOVED
+
+import { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+const LS_KEY = "apcm-care-plan-draft";
+const primaryHeader = "bg-[#1F4E78]";
+const secondaryHeader = "bg-[#4472C4]";
+const borderColor = "border-[#CCCCCC]";
+
+type ConditionRow = {
+  condition: string;
+  status: string;
+  changes: string;
+  providerAware: boolean;
+};
+
+type GoalRow = {
+  description: string;
+  barriers: string;
+  progress: string;
+  actions: string;
+};
+
+type MedicationRow = {
+  name: string;
+  adherence: string;
+  issues: string;
+};
+
+type UtilizationRow = {
+  event: string;
+  occurred: string;
+  provider: string;
+  followUp: string;
+};
+
+type RiskRow = {
+  assessment: string;
+  status: string;
+  flags: string;
+  response: string;
+};
+
+type EducationRow = {
+  topic: string;
+  understanding: string;
+  resources: string;
+};
+
+type CommunicationRow = {
+  member: string;
+  type: string;
+  date: string;
+};
+
+type AttestationItem = {
+  id: number;
+  element: string;
+  documented: boolean;
+};
+
+type Assessment = {
+  assessment: string;
+  actions: string;
+};
+
+type APCMCarePlan = {
+  patientId: string;
+  patientName: string;
+  dob: string;
+  age: string;
+  mrn: string;
+  email: string;
+  intakeDate: string;
+  careCoordinator: string;
+  provider: string;
+  conditions: ConditionRow[];
+  goals: GoalRow[];
+  medications: MedicationRow[];
+  utilization: UtilizationRow[];
+  risk: RiskRow[];
+  education: EducationRow[];
+  assessment: Assessment;
+  communications: CommunicationRow[];
+  attestations: AttestationItem[];
+  lastModified?: string;
+};
+
+type PatientOption = { id: string; name: string; risk: string; dob?: string; mrn?: string };
+
+type FormStatus =
+  | { type: "idle" }
+  | { type: "success"; message: string }
+  | { type: "error"; message: string };
+
+const basePatientOptions: PatientOption[] = [
+  { id: "p1", name: "Alex Johnson", risk: "Level 2", dob: "1980-04-12", mrn: "1234-567" },
+  { id: "p2", name: "Maria Chen", risk: "Level 1", dob: "1972-09-03", mrn: "9876-543" },
+  { id: "p3", name: "Samir Patel", risk: "Level 3", dob: "1959-11-21", mrn: "1357-246" },
+];
+
+const attestationElements: AttestationItem[] = [
+  { id: 1, element: "Patient consent on file (written/verbal)", documented: false },
+  { id: 2, element: "Comprehensive assessment completed", documented: false },
+  { id: 3, element: "Personalized care plan created and reviewed", documented: false },
+  { id: 4, element: "Medication reconciliation performed", documented: false },
+  { id: 5, element: "24/7 access instructions reviewed", documented: false },
+  { id: 6, element: "Care coordination with external providers", documented: false },
+  { id: 7, element: "SDOH barriers assessed and addressed", documented: false },
+  { id: 8, element: "Patient education provided", documented: false },
+  { id: 9, element: "Self-management goals established", documented: false },
+  { id: 10, element: "Follow-up schedule set", documented: false },
+  { id: 11, element: "Communication preferences documented", documented: false },
+  { id: 12, element: "Advance directives / proxy status reviewed", documented: false },
+  { id: 13, element: "Care plan copy provided to patient", documented: false },
+];
+
+const initialPlan: APCMCarePlan = {
+  patientId: "",
+  patientName: "",
+  dob: "",
+  age: "",
+  mrn: "",
+  email: "",
+  intakeDate: "",
+  careCoordinator: "",
+  provider: "",
+  conditions: [{ condition: "", status: "", changes: "", providerAware: false }],
+  goals: [{ description: "", barriers: "", progress: "", actions: "" }],
+  medications: [{ name: "", adherence: "", issues: "" }],
+  utilization: [{ event: "", occurred: "", provider: "", followUp: "" }],
+  risk: [{ assessment: "", status: "", flags: "", response: "" }],
+  education: [{ topic: "", understanding: "", resources: "" }],
+  assessment: { assessment: "", actions: "" },
+  communications: [{ member: "", type: "", date: "" }],
+  attestations: attestationElements,
+};
+
+const samplePlan: APCMCarePlan = {
+  patientId: "p1",
+  patientName: "Alex Johnson",
+  dob: "1980-04-12",
+  age: "44",
+  mrn: "1234-567",
+  email: "patient@example.com",
+  intakeDate: "2025-01-08",
+  careCoordinator: "RN Smith",
+  provider: "Dr. Taylor",
+  conditions: [
+    {
+      condition: "Hypertension",
+      status: "Active",
+      changes: "Home BP trending 140s/80s",
+      providerAware: true,
+    },
+    {
+      condition: "Type 2 Diabetes",
+      status: "Active",
+      changes: "A1c 8.2 last month",
+      providerAware: true,
+    },
+  ],
+  goals: [
+    {
+      description: "Lower A1c to 7.0% in 3 months",
+      barriers: "Diet adherence; med cost",
+      progress: "Working on meal plan",
+      actions: "RD referral; med sync; weekly RN call",
+    },
+    {
+      description: "Control BP <130/80 in 8 weeks",
+      barriers: "Missed doses; high-sodium meals",
+      progress: "Started home BP log",
+      actions: "Cuff education; sodium coaching; med reminders",
+    },
+  ],
+  medications: [
+    { name: "Metformin 1000 mg BID", adherence: "Partial", issues: "Misses PM dose" },
+    { name: "Losartan 50 mg daily", adherence: "Good", issues: "None" },
+  ],
+  utilization: [
+    {
+      event: "ED visit dizziness (11/2024)",
+      occurred: "Yes",
+      provider: "ED discharge to PCP",
+      followUp: "RN call; PCP follow-up scheduled",
+    },
+  ],
+  risk: [
+    {
+      assessment: "Fall risk",
+      status: "Moderate",
+      flags: "Dizziness; polypharmacy",
+      response: "Fall precautions reviewed; med review planned",
+    },
+  ],
+  education: [
+    {
+      topic: "Low-sodium diet; hypoglycemia signs",
+      understanding: "Teach-back completed",
+      resources: "Handouts; portal links",
+    },
+  ],
+  assessment: {
+    assessment: "Needs tighter glycemic and BP control; SDOH barriers with transport",
+    actions: "Coordinate transport; RD referral; med sync; close BP follow-up",
+  },
+  communications: [
+    { member: "PCP", type: "Secure message", date: "2025-01-10" },
+    { member: "RD", type: "Referral sent", date: "2025-01-12" },
+  ],
+  attestations: attestationElements.map((a) => ({ ...a, documented: true })),
+  lastModified: new Date().toISOString(),
+};
+
+export default function InitialCarePlanForm() {
+  const [plan, setPlan] = useState<APCMCarePlan>(initialPlan);
+  const [patients, setPatients] = useState<PatientOption[]>(basePatientOptions);
+  const [status, setStatus] = useState<FormStatus>({ type: "idle" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generatedPlan, setGeneratedPlan] = useState("");
+  const [prefillChecked, setPrefillChecked] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string>("");
+
+  const formattedLastSaved = useMemo(
+    () => (lastSaved ? new Date(lastSaved).toLocaleString() : "Not yet saved"),
+    [lastSaved],
+  );
+
+  useEffect(() => {
+    const stored = localStorage.getItem(LS_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as APCMCarePlan;
+      setPlan(parsed);
+      setLastSaved(parsed.lastModified ?? "");
+      setPrefillChecked(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!lastSaved) return;
+    localStorage.setItem(LS_KEY, JSON.stringify({ ...plan, lastModified: lastSaved }));
+  }, [plan, lastSaved]);
+
+  const touch = () => {
+    const iso = new Date().toISOString();
+    setLastSaved(iso);
+    return iso;
+  };
+
+  const updatePlan = (updater: (prev: APCMCarePlan) => APCMCarePlan) => {
+    setPlan((prev) => {
+      const next = updater(prev);
+      const iso = touch();
+      return { ...next, lastModified: iso };
+    });
+  };
+
+  const handleBasicChange = (
+    event:
+      | React.ChangeEvent<HTMLInputElement>
+      | React.ChangeEvent<HTMLTextAreaElement>
+      | React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const { name, value } = event.target;
+    updatePlan((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePatientSelect = (value: string) => {
+    const selected = patients.find((p) => p.id === value);
+    updatePlan((prev) => ({
+      ...prev,
+      patientId: value,
+      patientName: selected?.name ?? prev.patientName,
+      dob: selected?.dob ?? prev.dob,
+      mrn: selected?.mrn ?? prev.mrn,
+    }));
+  };
+
+  const updateRow = <K extends ArrayKeys, F extends keyof APCMCarePlan[K][number]>(
+    key: K,
+    index: number,
+    field: F,
+    value: APCMCarePlan[K][number][F],
+  ) => {
+    updatePlan((prev) => {
+      const list = [...prev[key]];
+      const target = { ...list[index], [field]: value } as APCMCarePlan[K][number];
+      list[index] = target;
+      return { ...prev, [key]: list };
+    });
+  };
+
+  const addRow = (key: ArrayKeys) => {
+    const defaults: Record<ArrayKeys, any> = {
+      conditions: { condition: "", status: "", changes: "", providerAware: false },
+      goals: { description: "", barriers: "", progress: "", actions: "" },
+      medications: { name: "", adherence: "", issues: "" },
+      utilization: { event: "", occurred: "", provider: "", followUp: "" },
+      risk: { assessment: "", status: "", flags: "", response: "" },
+      education: { topic: "", understanding: "", resources: "" },
+      communications: { member: "", type: "", date: "" },
+    };
+    updatePlan((prev) => ({
+      ...prev,
+      [key]: [...prev[key], defaults[key]],
+    }));
+  };
+
+  const toggleAttestation = (id: number, checked: boolean) => {
+    updatePlan((prev) => ({
+      ...prev,
+      attestations: prev.attestations.map((item) =>
+        item.id === id ? { ...item, documented: checked } : item,
+      ),
+    }));
+  };
+
+  const handlePrefillToggle = (checked: boolean) => {
+    setPrefillChecked(checked);
+    if (checked) {
+      setPlan(samplePlan);
+      setGeneratedPlan("");
+      setStatus({
+        type: "success",
+        message: "Sample data prefilled for quick testing.",
+      });
+      setLastSaved(samplePlan.lastModified ?? new Date().toISOString());
+    } else {
+      setPlan(initialPlan);
+      setGeneratedPlan("");
+      setStatus({ type: "idle" });
+      setLastSaved("");
+    }
+  };
+
+  const generateTestPatients = () => {
+    const names = [
+      "Jordan Lee",
+      "Priya Nair",
+      "Diego Martinez",
+      "Fatima Rahman",
+      "Chris O'Connor",
+    ];
+    const risks = ["Level 1", "Level 2", "Level 3"];
+    const now = Date.now();
+    const generated: PatientOption[] = names.map((name, idx) => ({
+      id: `tp-${now}-${idx}`,
+      name,
+      risk: risks[idx % risks.length],
+    }));
+
+    setPatients((prev) => [...prev, ...generated]);
+    if (!plan.patientId && generated.length > 0) {
+      handlePatientSelect(generated[0].id);
+    }
+    setStatus({
+      type: "success",
+      message: `Added ${generated.length} test patients for training.`,
+    });
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const required = ["patientId", "patientName", "careCoordinator", "provider", "intakeDate"] as const;
+    const missingRequired = required.filter((key) => !(plan as any)[key]);
+    const missingTables: string[] = [];
+    if (!plan.conditions.length) missingTables.push("Chronic Conditions");
+    if (!plan.goals.length) missingTables.push("Patient Goals");
+    if (!plan.medications.length) missingTables.push("Medication Review");
+
+    if (missingRequired.length || missingTables.length) {
+      setStatus({
+        type: "error",
+        message: `Please complete required fields: ${[...missingRequired, ...missingTables].join(", ")}`,
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setGeneratedPlan("");
+    setStatus({ type: "idle" });
+
+    try {
+      const response = await fetch("/api/ai-care-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ form: plan }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.error ?? "Failed to generate care plan");
+      }
+
+      const data = (await response.json()) as { plan?: string };
+      setGeneratedPlan(data.plan ?? "");
+      setStatus({
+        type: "success",
+        message: "Care plan saved. AI summary ready below.",
+      });
+    } catch (error) {
+      console.error("Care plan generation failed", error);
+      setStatus({
+        type: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to generate care plan right now.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReset = () => {
+    setPlan(initialPlan);
+    setGeneratedPlan("");
+    setStatus({ type: "idle" });
+    setLastSaved("");
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold text-slate-900">APCM Care Plan</h2>
+          <p className="text-sm text-slate-600">
+            Professional, print-friendly layout with inline editing and attestation.
+          </p>
+          <p className="text-xs text-slate-500">Last modified: {formattedLastSaved}</p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={generateTestPatients}
+              className="inline-flex items-center justify-center rounded-md border border-[#4472C4] bg-[#D9E1F2] px-3 py-1.5 text-xs font-semibold text-[#1F4E78] transition hover:bg-[#c8d5ec] focus:outline-none focus:ring-2 focus:ring-[#4472C4] focus:ring-offset-1"
+            >
+              Generate test patients
+            </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center justify-center rounded-md border border-[#4472C4] bg-white px-3 py-1.5 text-xs font-semibold text-[#1F4E78] transition hover:bg-[#D9E1F2] focus:outline-none focus:ring-2 focus:ring-[#4472C4] focus:ring-offset-1"
+            >
+              Print / Export PDF
+            </button>
+          </div>
+          <label className="flex items-center gap-2 text-xs font-medium text-slate-800">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-[#1F4E78] focus:ring-[#4472C4]"
+              checked={prefillChecked}
+              onChange={(e) => handlePrefillToggle(e.target.checked)}
+            />
+            Pre-fill required fields (sample data)
+          </label>
+          <span className="rounded-full bg-[#D9E1F2] px-3 py-1 text-xs font-semibold text-[#1F4E78]">
+            Required fields marked *
+          </span>
+        </div>
+      </div>
+
+      {status.type === "error" && (
+        <div className="mt-4 rounded-md border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {status.message}
+        </div>
+      )}
+      {status.type === "success" && (
+        <div className="mt-4 rounded-md border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {status.message}
+        </div>
+      )}
+
+      <form className="mt-6 space-y-10" onSubmit={handleSubmit}>
+        <SectionCard title="Patient Demographics">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className={`${primaryHeader} text-white`}>
+                <TableHeader>Patient Name *</TableHeader>
+                <TableHeader>DOB / Age</TableHeader>
+                <TableHeader>MRN</TableHeader>
+                <TableHeader>Care Coordinator *</TableHeader>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="odd:bg-white even:bg-[#D9E1F2]">
+                <TableCell>
+                  <div className="flex gap-2">
+                    <select
+                      value={plan.patientId}
+                      onChange={(e) => handlePatientSelect(e.target.value)}
+                      className="w-40 rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                      required
+                    >
+                      <option value="">Select patient</option>
+                      {patients.map((patient) => (
+                        <option key={patient.id} value={patient.id}>
+                          {patient.name} — {patient.risk}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      name="patientName"
+                      value={plan.patientName}
+                      onChange={handleBasicChange}
+                      className="flex-1 rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                      placeholder="Patient name"
+                      required
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <input
+                      name="dob"
+                      type="date"
+                      value={plan.dob}
+                      onChange={handleBasicChange}
+                      className="w-40 rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                    />
+                    <input
+                      name="age"
+                      value={plan.age}
+                      onChange={handleBasicChange}
+                      className="w-16 rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                      placeholder="Age"
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <input
+                    name="mrn"
+                    value={plan.mrn}
+                    onChange={handleBasicChange}
+                    className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                    placeholder="Medical record number"
+                  />
+                </TableCell>
+                <TableCell>
+                  <input
+                    name="careCoordinator"
+                    value={plan.careCoordinator}
+                    onChange={handleBasicChange}
+                    required
+                    className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                    placeholder="Coordinator name"
+                  />
+                </TableCell>
+              </tr>
+              <tr className="odd:bg-white even:bg-[#D9E1F2]">
+                <TableCell>
+                  <input
+                    name="email"
+                    type="email"
+                    value={plan.email}
+                    onChange={handleBasicChange}
+                    className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                    placeholder="Email (optional)"
+                  />
+                </TableCell>
+                <TableCell>
+                  <input
+                    name="intakeDate"
+                    type="date"
+                    value={plan.intakeDate}
+                    onChange={handleBasicChange}
+                    required
+                    className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  />
+                </TableCell>
+                <TableCell>
+                  <input
+                    name="provider"
+                    value={plan.provider}
+                    onChange={handleBasicChange}
+                    required
+                    className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                    placeholder="Provider"
+                  />
+                </TableCell>
+                <TableCell />
+              </tr>
+            </tbody>
+          </table>
+        </SectionCard>
+
+        <TableSection
+          title="1) Chronic Conditions"
+          description="Condition, status, changes, provider awareness"
+          columns={["Condition", "Status", "Changes", "Provider Aware"]}
+          headerTone="primary"
+          onAddRow={() => addRow("conditions")}
+        >
+          {plan.conditions.map((row, idx) => (
+            <tr key={`cond-${idx}`} className="odd:bg-white even:bg-[#D9E1F2]">
+              <TableCell>
+                <input
+                  value={row.condition}
+                  onChange={(e) => updateRow("conditions", idx, "condition", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  placeholder="Condition"
+                />
+              </TableCell>
+              <TableCell>
+                <input
+                  value={row.status}
+                  onChange={(e) => updateRow("conditions", idx, "status", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  placeholder="Status"
+                />
+              </TableCell>
+              <TableCell>
+                <textarea
+                  value={row.changes}
+                  onChange={(e) => updateRow("conditions", idx, "changes", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Recent changes / notes"
+                />
+              </TableCell>
+              <TableCell className="text-center">
+                <input
+                  type="checkbox"
+                  checked={row.providerAware}
+                  onChange={(e) => updateRow("conditions", idx, "providerAware", e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-[#1F4E78] focus:ring-[#4472C4]"
+                />
+              </TableCell>
+            </tr>
+          ))}
+        </TableSection>
+
+        <TableSection
+          title="2) Patient Goals & Progress"
+          description="Goal, barriers, progress, coordinator actions"
+          columns={["Goal Description", "Barriers", "Progress", "Coordinator Actions"]}
+          headerTone="secondary"
+          onAddRow={() => addRow("goals")}
+        >
+          {plan.goals.map((row, idx) => (
+            <tr key={`goal-${idx}`} className="odd:bg-white even:bg-[#D9E1F2]">
+              <TableCell>
+                <textarea
+                  value={row.description}
+                  onChange={(e) => updateRow("goals", idx, "description", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Goal description"
+                />
+              </TableCell>
+              <TableCell>
+                <textarea
+                  value={row.barriers}
+                  onChange={(e) => updateRow("goals", idx, "barriers", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Barriers"
+                />
+              </TableCell>
+              <TableCell>
+                <textarea
+                  value={row.progress}
+                  onChange={(e) => updateRow("goals", idx, "progress", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Progress"
+                />
+              </TableCell>
+              <TableCell>
+                <textarea
+                  value={row.actions}
+                  onChange={(e) => updateRow("goals", idx, "actions", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Coordinator actions"
+                />
+              </TableCell>
+            </tr>
+          ))}
+        </TableSection>
+
+        <TableSection
+          title="3) Medication Review"
+          description="Medication, adherence, issues"
+          columns={["Medication / Dose", "Adherence Status", "Issues"]}
+          headerTone="primary"
+          onAddRow={() => addRow("medications")}
+        >
+          {plan.medications.map((row, idx) => (
+            <tr key={`med-${idx}`} className="odd:bg-white even:bg-[#D9E1F2]">
+              <TableCell>
+                <textarea
+                  value={row.name}
+                  onChange={(e) => updateRow("medications", idx, "name", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Medication and dose"
+                />
+              </TableCell>
+              <TableCell>
+                <input
+                  value={row.adherence}
+                  onChange={(e) => updateRow("medications", idx, "adherence", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  placeholder="Good / Partial / Poor"
+                />
+              </TableCell>
+              <TableCell>
+                <textarea
+                  value={row.issues}
+                  onChange={(e) => updateRow("medications", idx, "issues", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Side effects, cost, access"
+                />
+              </TableCell>
+            </tr>
+          ))}
+        </TableSection>
+
+        <TableSection
+          title="4) Healthcare Utilization & Care Transitions"
+          description="Events, occurrence, provider details, follow-up"
+          columns={["Event Type", "Occurred", "Provider Details", "Follow-up"]}
+          headerTone="secondary"
+          onAddRow={() => addRow("utilization")}
+        >
+          {plan.utilization.map((row, idx) => (
+            <tr key={`util-${idx}`} className="odd:bg-white even:bg-[#D9E1F2]">
+              <TableCell>
+                <input
+                  value={row.event}
+                  onChange={(e) => updateRow("utilization", idx, "event", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  placeholder="Hospital/ED/SNF/etc."
+                />
+              </TableCell>
+              <TableCell>
+                <input
+                  value={row.occurred}
+                  onChange={(e) => updateRow("utilization", idx, "occurred", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  placeholder="Yes/No + date"
+                />
+              </TableCell>
+              <TableCell>
+                <textarea
+                  value={row.provider}
+                  onChange={(e) => updateRow("utilization", idx, "provider", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Provider details"
+                />
+              </TableCell>
+              <TableCell>
+                <textarea
+                  value={row.followUp}
+                  onChange={(e) => updateRow("utilization", idx, "followUp", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Follow-up actions"
+                />
+              </TableCell>
+            </tr>
+          ))}
+        </TableSection>
+
+        <TableSection
+          title="5) Risk Assessment & Safety"
+          description="Risk, score/status, flags, response"
+          columns={["Risk Assessment", "Score/Status", "Safety Flags", "Response"]}
+          headerTone="primary"
+          onAddRow={() => addRow("risk")}
+        >
+          {plan.risk.map((row, idx) => (
+            <tr key={`risk-${idx}`} className="odd:bg-white even:bg-[#D9E1F2]">
+              <TableCell>
+                <input
+                  value={row.assessment}
+                  onChange={(e) => updateRow("risk", idx, "assessment", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  placeholder="Fall risk, PHQ-9, etc."
+                />
+              </TableCell>
+              <TableCell>
+                <input
+                  value={row.status}
+                  onChange={(e) => updateRow("risk", idx, "status", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  placeholder="Score or status"
+                />
+              </TableCell>
+              <TableCell>
+                <textarea
+                  value={row.flags}
+                  onChange={(e) => updateRow("risk", idx, "flags", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Safety flags"
+                />
+              </TableCell>
+              <TableCell>
+                <textarea
+                  value={row.response}
+                  onChange={(e) => updateRow("risk", idx, "response", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Response / plan"
+                />
+              </TableCell>
+            </tr>
+          ))}
+        </TableSection>
+
+        <TableSection
+          title="6) Education Provided"
+          description="Topics, understanding, resources"
+          columns={["Topics Covered", "Patient Understanding", "Resources"]}
+          headerTone="secondary"
+          onAddRow={() => addRow("education")}
+        >
+          {plan.education.map((row, idx) => (
+            <tr key={`edu-${idx}`} className="odd:bg-white even:bg-[#D9E1F2]">
+              <TableCell>
+                <textarea
+                  value={row.topic}
+                  onChange={(e) => updateRow("education", idx, "topic", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Topics covered"
+                />
+              </TableCell>
+              <TableCell>
+                <input
+                  value={row.understanding}
+                  onChange={(e) => updateRow("education", idx, "understanding", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  placeholder="Teach-back / understanding"
+                />
+              </TableCell>
+              <TableCell>
+                <textarea
+                  value={row.resources}
+                  onChange={(e) => updateRow("education", idx, "resources", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  rows={2}
+                  placeholder="Links, handouts"
+                />
+              </TableCell>
+            </tr>
+          ))}
+        </TableSection>
+
+        <SectionCard title="7) Coordinator Clinical Assessment">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className={`${primaryHeader} text-white`}>
+                <TableHeader>Overall Assessment</TableHeader>
+                <TableHeader>Recommended Actions</TableHeader>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="odd:bg-white even:bg-[#D9E1F2]">
+                <TableCell>
+                  <textarea
+                    value={plan.assessment.assessment}
+                    onChange={(e) =>
+                      updatePlan((prev) => ({
+                        ...prev,
+                        assessment: { ...prev.assessment, assessment: e.target.value },
+                      }))
+                    }
+                    className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                    rows={3}
+                    placeholder="Coordinator assessment"
+                  />
+                </TableCell>
+                <TableCell>
+                  <textarea
+                    value={plan.assessment.actions}
+                    onChange={(e) =>
+                      updatePlan((prev) => ({
+                        ...prev,
+                        assessment: { ...prev.assessment, actions: e.target.value },
+                      }))
+                    }
+                    className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                    rows={3}
+                    placeholder="Recommended actions"
+                  />
+                </TableCell>
+              </tr>
+            </tbody>
+          </table>
+        </SectionCard>
+
+        <TableSection
+          title="8) Care Coordination & Communication"
+          description="Care team member, communication type, date"
+          columns={["Care Team Member", "Communication Type", "Date"]}
+          headerTone="secondary"
+          onAddRow={() => addRow("communications")}
+        >
+          {plan.communications.map((row, idx) => (
+            <tr key={`comm-${idx}`} className="odd:bg-white even:bg-[#D9E1F2]">
+              <TableCell>
+                <input
+                  value={row.member}
+                  onChange={(e) => updateRow("communications", idx, "member", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  placeholder="Team member"
+                />
+              </TableCell>
+              <TableCell>
+                <input
+                  value={row.type}
+                  onChange={(e) => updateRow("communications", idx, "type", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                  placeholder="Call / message / visit"
+                />
+              </TableCell>
+              <TableCell>
+                <input
+                  type="date"
+                  value={row.date}
+                  onChange={(e) => updateRow("communications", idx, "date", e.target.value)}
+                  className="w-full rounded-md border border-[#CCCCCC] px-2 py-1 text-sm focus:border-[#4472C4] focus:outline-none focus:ring-1 focus:ring-[#4472C4]"
+                />
+              </TableCell>
+            </tr>
+          ))}
+        </TableSection>
+
+        <SectionCard title="9) APCM Service Elements Attestation">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className={`${primaryHeader} text-white`}>
+                <TableHeader className="w-10 text-center">#</TableHeader>
+                <TableHeader>Service Element</TableHeader>
+                <TableHeader className="w-32 text-center">Documented</TableHeader>
+              </tr>
+            </thead>
+            <tbody>
+              {plan.attestations.map((item) => (
+                <tr key={`att-${item.id}`} className="odd:bg-white even:bg-[#D9E1F2]">
+                  <TableCell className="text-center font-semibold">{item.id}</TableCell>
+                  <TableCell>{item.element}</TableCell>
+                  <TableCell className="text-center">
+                    <input
+                      type="checkbox"
+                      checked={item.documented}
+                      onChange={(e) => toggleAttestation(item.id, e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-[#1F4E78] focus:ring-[#4472C4]"
+                    />
+                  </TableCell>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </SectionCard>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center justify-center rounded-md bg-[#1F4E78] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#15375a] focus:outline-none focus:ring-2 focus:ring-[#4472C4] focus:ring-offset-1"
+          >
+            {isSubmitting ? "Generating..." : "Save & Generate Care Plan"}
+          </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="inline-flex items-center justify-center rounded-md border border-[#CCCCCC] px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-[#D9E1F2] focus:outline-none focus:ring-2 focus:ring-[#4472C4] focus:ring-offset-1"
+          >
+            Reset Form
+          </button>
+          <p className="text-xs text-slate-500">
+            Draft auto-saves locally. Set OPENAI_API_KEY to enable AI summary.
+          </p>
+        </div>
+      </form>
+
+    </section>
+  );
+}
+
+type ArrayKeys =
+  | "conditions"
+  | "goals"
+  | "medications"
+  | "utilization"
+  | "risk"
+  | "education"
+  | "communications";
+
+function SectionCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-3 rounded-md border border-[#CCCCCC] bg-[#D9E1F2] p-4">
+      <div className="text-sm font-semibold text-[#1F4E78]">{title}</div>
+      <div className="rounded-md border border-[#CCCCCC] bg-white p-2">{children}</div>
+    </div>
+  );
+}
+
+function TableSection({
+  title,
+  description,
+  columns,
+  headerTone = "primary",
+  onAddRow,
+  children,
+}: {
+  title: string;
+  description?: string;
+  columns: string[];
+  headerTone?: "primary" | "secondary";
+  onAddRow?: () => void;
+  children: React.ReactNode;
+}) {
+  const headerColor = headerTone === "primary" ? primaryHeader : secondaryHeader;
+  return (
+    <SectionCard title={title}>
+      {description ? (
+        <p className="px-1 text-xs text-slate-600">{description}</p>
+      ) : null}
+      <table className="mt-2 w-full border-collapse text-sm">
+        <thead>
+          <tr className={`${headerColor} text-white`}>
+            {columns.map((col) => (
+              <TableHeader key={col}>{col}</TableHeader>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+      {onAddRow ? (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={onAddRow}
+            className="inline-flex items-center justify-center rounded-md border border-[#4472C4] bg-white px-3 py-1.5 text-xs font-semibold text-[#1F4E78] transition hover:bg-[#D9E1F2] focus:outline-none focus:ring-2 focus:ring-[#4472C4] focus:ring-offset-1"
+          >
+            Add row
+          </button>
+        </div>
+      ) : null}
+    </SectionCard>
+  );
+}
+
+function TableHeader({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <th
+      className={`border ${borderColor} px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide ${className}`}
+    >
+      {children}
+    </th>
+  );
+}
+
+function TableCell({
+  children,
+  className = "",
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <td className={`border ${borderColor} px-3 py-2 align-top text-sm text-slate-800 ${className}`}>
+      {children}
+    </td>
+  );
+}
+
+function renderPlan(plan: string) {
+  const stripCodeFence = (text: string) => {
+    const fenced = text.match(/^\s*```[a-zA-Z0-9]*\s*\n([\s\S]*?)\n?```\s*$/m);
+    if (fenced?.[1]) return fenced[1];
+    return text.replace(/```/g, "");
+  };
+
+  const cleaned = stripCodeFence(plan).replace(/\r/g, "");
+
+  const components = {
+    h1: ({ children }: { children: React.ReactNode }) => (
+      <h2 className="text-lg font-semibold text-[#1F4E78]">{children}</h2>
+    ),
+    h2: ({ children }: { children: React.ReactNode }) => (
+      <h3 className="text-base font-semibold text-[#1F4E78]">{children}</h3>
+    ),
+    h3: ({ children }: { children: React.ReactNode }) => (
+      <h4 className="text-sm font-semibold text-[#1F4E78]">{children}</h4>
+    ),
+    p: ({ children }: { children: React.ReactNode }) => (
+      <p className="text-sm text-slate-800">{children}</p>
+    ),
+    ul: ({ children }: { children: React.ReactNode }) => (
+      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-800">{children}</ul>
+    ),
+    li: ({ children }: { children: React.ReactNode }) => <li>{children}</li>,
+    table: ({ children }: { children: React.ReactNode }) => (
+      <div className="overflow-hidden rounded-md border border-slate-200 shadow-sm">
+        <table className="min-w-full border-collapse text-sm">{children}</table>
+      </div>
+    ),
+    thead: ({ children }: { children: React.ReactNode }) => (
+      <thead className="bg-[#1F4E78] text-white">{children}</thead>
+    ),
+    tbody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
+    tr: ({ children }: { children: React.ReactNode }) => (
+      <tr className="even:bg-[#F3F6FB]">{children}</tr>
+    ),
+    th: ({ children }: { children: React.ReactNode }) => (
+      <th className="border border-[#1F4E78] px-3 py-2 text-left font-semibold">{children}</th>
+    ),
+    td: ({ children }: { children: React.ReactNode }) => (
+      <td className="border border-slate-200 px-3 py-2 align-top text-slate-800">{children}</td>
+    ),
+  };
+
+  return (
+    <div className="space-y-4">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        {cleaned}
+      </ReactMarkdown>
+    </div>
+  );
+}
 'use client';
 
 import { useState } from "react";
@@ -1105,72 +2254,4 @@ function friendlyLabel(field: keyof CarePlanFormState): string {
     coordinatorSignature: "Coordinator Signature/Initials",
   };
   return labels[field];
-}
-
-function renderPlan(plan: string) {
-  const blocks = plan.trim().split(/\n\s*\n/).filter(Boolean);
-
-  return (
-    <div className="space-y-3">
-      {blocks.map((block, idx) => {
-        const lines = block.split("\n").filter(Boolean);
-        const first = lines[0] ?? "";
-
-        if (first.startsWith("# ")) {
-          return (
-            <div key={idx} className="space-y-1">
-              <h2 className="text-base font-semibold text-slate-900">
-                {first.replace(/^#\s*/, "")}
-              </h2>
-              {lines.slice(1).map((line, lineIdx) => (
-                <p key={lineIdx} className="text-sm text-slate-800">
-                  {line.replace(/^-\s*/, "")}
-                </p>
-              ))}
-            </div>
-          );
-        }
-
-        if (first.startsWith("## ")) {
-          return (
-            <div key={idx} className="space-y-1">
-              <h3 className="text-sm font-semibold text-slate-900">
-                {first.replace(/^##\s*/, "")}
-              </h3>
-              {renderListOrParagraph(lines.slice(1), idx)}
-            </div>
-          );
-        }
-
-        return (
-          <div key={idx} className="space-y-1">
-            {renderListOrParagraph(lines, idx)}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function renderListOrParagraph(lines: string[], keyBase: number) {
-  const isList = lines.every((line) => line.trim().startsWith("-"));
-  if (isList) {
-    return (
-      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-800">
-        {lines.map((line, idx) => (
-          <li key={`${keyBase}-li-${idx}`}>{line.replace(/^-\s*/, "")}</li>
-        ))}
-      </ul>
-    );
-  }
-
-  return (
-    <>
-      {lines.map((line, idx) => (
-        <p key={`${keyBase}-p-${idx}`} className="text-sm text-slate-800">
-          {line.replace(/^-\s*/, "")}
-        </p>
-      ))}
-    </>
-  );
 }
