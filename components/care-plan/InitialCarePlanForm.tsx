@@ -1197,13 +1197,11 @@ function renderPlan(plan: string) {
 
   return (
     <div className="space-y-4">
-      <ReactMarkdown
-        className="prose prose-slate max-w-none prose-headings:text-[#1F4E78] prose-p:text-slate-800 prose-strong:text-[#1F4E78]"
-        remarkPlugins={[remarkGfm]}
-        components={components}
-      >
-        {cleaned}
-      </ReactMarkdown>
+      <div className="prose prose-slate max-w-none prose-headings:text-[#1F4E78] prose-p:text-slate-800 prose-strong:text-[#1F4E78]">
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+          {cleaned}
+        </ReactMarkdown>
+      </div>
     </div>
   );
 }
