@@ -1203,7 +1203,6 @@ function renderPlan(plan: string) {
   marked.setOptions({
     gfm: true,
     breaks: true,
-    headerIds: false,
     renderer,
   });
 
