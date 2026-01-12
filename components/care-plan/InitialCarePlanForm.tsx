@@ -1,4 +1,4 @@
-/* DUPLICATE BLOCK REMOVED
+'use client';
 
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -989,6 +989,18 @@ export default function InitialCarePlanForm() {
         </div>
       </form>
 
+      {generatedPlan && (
+        <div className="mt-6 space-y-3 rounded-lg border border-[#CCCCCC] bg-[#F7F9FC] p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#1F4E78]">
+            <span className="h-2 w-2 rounded-full bg-[#4472C4]" />
+            AI-Generated APCM Care Plan
+          </div>
+          <div className="rounded-md border border-[#D9E1F2] bg-white p-4 text-sm text-slate-800 shadow-inner">
+            {renderPlan(generatedPlan)}
+          </div>
+        </div>
+      )}
+
     </section>
   );
 }
@@ -1094,13 +1106,31 @@ function TableCell({
 }
 
 function renderPlan(plan: string) {
+  // GPT sometimes wraps markdown in ```markdown ... ``` or leaves stray fences;
+  // strip any fenced blocks first and normalize line endings so ReactMarkdown can style it.
   const stripCodeFence = (text: string) => {
-    const fenced = text.match(/^\s*```[a-zA-Z0-9]*\s*\n([\s\S]*?)\n?```\s*$/m);
+    const fenced = text.match(/```(?:markdown)?\s*([\s\S]*?)```/i);
     if (fenced?.[1]) return fenced[1];
     return text.replace(/```/g, "");
   };
 
-  const cleaned = stripCodeFence(plan).replace(/\r/g, "");
+  const normalizeIndentation = (text: string) => {
+    const lines = text.split("\n");
+    const indents = lines
+      .filter((line) => line.trim().length > 0)
+      .map((line) => line.match(/^(\s*)/)?.[1].length ?? 0);
+    const minIndent = indents.length ? Math.min(...indents) : 0;
+    if (minIndent === 0) return text;
+    return lines.map((line) => line.slice(minIndent)).join("\n");
+  };
+
+  // Tables need a blank line before them or they render as text; add spacing.
+  const ensureTableSpacing = (text: string) =>
+    text.replace(/([^\n])\n(\|)/g, "$1\n\n$2");
+
+  const cleaned = ensureTableSpacing(
+    normalizeIndentation(stripCodeFence(plan).replace(/\r/g, "")),
+  ).trim();
 
   const components = {
     h1: ({ children }: { children: React.ReactNode }) => (
@@ -1147,6 +1177,8 @@ function renderPlan(plan: string) {
     </div>
   );
 }
+/* DUPLICATE BLOCK COMMENTED OUT
+/* DUPLICATE BLOCK START
 'use client';
 
 import { useState } from "react";
@@ -2255,3 +2287,4 @@ function friendlyLabel(field: keyof CarePlanFormState): string {
   };
   return labels[field];
 }
+*/
