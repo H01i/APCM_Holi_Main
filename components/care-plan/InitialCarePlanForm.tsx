@@ -1114,6 +1114,36 @@ function renderPlan(plan: string) {
     return text.replace(/```/g, "");
   };
 
+  // If the model outputs plain labels (e.g., "Demographics" or "Chronic Conditions table")
+  // immediately followed by a table, promote them to headings for better styling.
+  const promoteTableHeadings = (text: string) => {
+    const lines = text.split(/\r?\n/);
+    const result: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      if (!trimmed) {
+        result.push(line);
+        continue;
+      }
+
+      const nextNonEmpty = lines.slice(i + 1).find((l) => l.trim().length > 0);
+      const isLabel =
+        !trimmed.startsWith("#") &&
+        !trimmed.startsWith("|") &&
+        !trimmed.startsWith("- ") &&
+        nextNonEmpty?.trim().startsWith("|");
+
+      if (isLabel) {
+        const label = trimmed.replace(/\s+table$/i, "");
+        result.push(`## ${label}`);
+      } else {
+        result.push(line);
+      }
+    }
+    return result.join("\n");
+  };
+
   const normalizeIndentation = (text: string) => {
     const lines = text.split("\n");
     const indents = lines
@@ -1129,7 +1159,9 @@ function renderPlan(plan: string) {
     text.replace(/([^\n])\n(\|)/g, "$1\n\n$2");
 
   const cleaned = ensureTableSpacing(
-    normalizeIndentation(stripCodeFence(plan).replace(/\r/g, "")),
+    promoteTableHeadings(
+      normalizeIndentation(stripCodeFence(plan).replace(/\r/g, "")),
+    ),
   ).trim();
 
   const components: Components = {
@@ -1165,7 +1197,11 @@ function renderPlan(plan: string) {
 
   return (
     <div className="space-y-4">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown
+        className="prose prose-slate max-w-none prose-headings:text-[#1F4E78] prose-p:text-slate-800 prose-strong:text-[#1F4E78]"
+        remarkPlugins={[remarkGfm]}
+        components={components}
+      >
         {cleaned}
       </ReactMarkdown>
     </div>
