@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 const LS_KEY = "apcm-care-plan-draft";
@@ -1132,40 +1132,34 @@ function renderPlan(plan: string) {
     normalizeIndentation(stripCodeFence(plan).replace(/\r/g, "")),
   ).trim();
 
-  const components = {
-    h1: ({ children }: { children: React.ReactNode }) => (
-      <h2 className="text-lg font-semibold text-[#1F4E78]">{children}</h2>
+  const components: Components = {
+    h1: ({ node, ...props }) => (
+      <h2 className="text-lg font-semibold text-[#1F4E78]" {...props} />
     ),
-    h2: ({ children }: { children: React.ReactNode }) => (
-      <h3 className="text-base font-semibold text-[#1F4E78]">{children}</h3>
+    h2: ({ node, ...props }) => (
+      <h3 className="text-base font-semibold text-[#1F4E78]" {...props} />
     ),
-    h3: ({ children }: { children: React.ReactNode }) => (
-      <h4 className="text-sm font-semibold text-[#1F4E78]">{children}</h4>
+    h3: ({ node, ...props }) => (
+      <h4 className="text-sm font-semibold text-[#1F4E78]" {...props} />
     ),
-    p: ({ children }: { children: React.ReactNode }) => (
-      <p className="text-sm text-slate-800">{children}</p>
+    p: ({ node, ...props }) => <p className="text-sm text-slate-800" {...props} />,
+    ul: ({ node, ...props }) => (
+      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-800" {...props} />
     ),
-    ul: ({ children }: { children: React.ReactNode }) => (
-      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-800">{children}</ul>
-    ),
-    li: ({ children }: { children: React.ReactNode }) => <li>{children}</li>,
-    table: ({ children }: { children: React.ReactNode }) => (
+    li: ({ node, ...props }) => <li {...props} />,
+    table: ({ node, ...props }) => (
       <div className="overflow-hidden rounded-md border border-slate-200 shadow-sm">
-        <table className="min-w-full border-collapse text-sm">{children}</table>
+        <table className="min-w-full border-collapse text-sm" {...props} />
       </div>
     ),
-    thead: ({ children }: { children: React.ReactNode }) => (
-      <thead className="bg-[#1F4E78] text-white">{children}</thead>
+    thead: ({ node, ...props }) => <thead className="bg-[#1F4E78] text-white" {...props} />,
+    tbody: ({ node, ...props }) => <tbody {...props} />,
+    tr: ({ node, ...props }) => <tr className="even:bg-[#F3F6FB]" {...props} />,
+    th: ({ node, ...props }) => (
+      <th className="border border-[#1F4E78] px-3 py-2 text-left font-semibold" {...props} />
     ),
-    tbody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
-    tr: ({ children }: { children: React.ReactNode }) => (
-      <tr className="even:bg-[#F3F6FB]">{children}</tr>
-    ),
-    th: ({ children }: { children: React.ReactNode }) => (
-      <th className="border border-[#1F4E78] px-3 py-2 text-left font-semibold">{children}</th>
-    ),
-    td: ({ children }: { children: React.ReactNode }) => (
-      <td className="border border-slate-200 px-3 py-2 align-top text-slate-800">{children}</td>
+    td: ({ node, ...props }) => (
+      <td className="border border-slate-200 px-3 py-2 align-top text-slate-800" {...props} />
     ),
   };
 
